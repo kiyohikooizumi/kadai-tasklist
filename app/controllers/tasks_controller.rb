@@ -1,6 +1,14 @@
 class TasksController < ApplicationController
+  before_action :require_user_logged_in, only: [:index, :new, :create]
+  before_action :set_task, only: [:show, :edit, :update, :destroy]
+  before_action :correct_user, only: [:show, :edit, :update, :destroy]
+  
   def index
-    @tasks = Task.all.page(params[:page]).per(10)
+    if logged_in?
+      @user = current_user
+      @task = current_user.tasks.build
+      @tasks = current_user.tasks.order('created_at DESC').page(params[:page])
+    end
   end
   
   def show
@@ -8,11 +16,11 @@ class TasksController < ApplicationController
   end
   
   def new
-    @task = Task.new
+    @task = current_user.tasks.new
   end
   
   def create
-    @task = Task.new(task_params)
+    @task = current_user.tasks.build(task_params)
     
     if @task.save
       flash[:success] = "Task が正常に保存されました"
@@ -51,9 +59,16 @@ class TasksController < ApplicationController
   
 private
 
-  # Strong Parameter
+  def set_task
+    @task = Task.find(params[:id])
+  end
+  
   def task_params
     params.require(:task).permit(:content, :status)
   end
   
+  def correct_user
+    redirect_to root_url if @task.user != current_user
+  end
+
 end
